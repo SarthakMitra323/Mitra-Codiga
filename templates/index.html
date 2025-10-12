@@ -5,10 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Mitra Codiga: Advanced programming language interpreter with variables, functions, control flow, interactive input/output. Features real-time web editor, REPL mode, educational examples. Perfect for learning language design, prototyping algorithms, and interactive programming. Built with Python.">
     <title>Mitra Codiga - Online Interpreter</title>
-    <link rel="apple-touch-icon" sizes="180x180" href="docs/apple-touch-icon.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="docs/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="docs/favicon-16x16.png">
-    <link rel="manifest" href="docs/site.webmanifest">
+    <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+    <link rel="manifest" href="site.webmanifest">
     <style>
         * {
             margin: 0;
@@ -252,6 +252,103 @@
                 justify-content: center;
             }
         }
+
+        /* LANDING PAGE STYLES */
+        #landing-modal {
+            position: fixed;
+            z-index: 1000;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(44,62,80,0.97);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+        
+        #landing-modal h1 {
+            color: #fff;
+            font-size: 3em;
+            margin-bottom: 0.5em;
+        }
+        
+        #landing-modal p {
+            color: #ecf0f1;
+            font-size: 1.3em;
+            max-width: 500px;
+            text-align: center;
+            margin-bottom: 2em;
+        }
+        
+        /* AUTH MODAL STYLES */
+        #auth-modal {
+            display: none;
+            position: fixed;
+            z-index: 1100;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(44,62,80,0.97);
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+        
+        #auth-modal div {
+            background: #fff;
+            padding: 2em 2.5em;
+            border-radius: 12px;
+            box-shadow: 0 4px 24px #222;
+            max-width: 350px;
+            text-align: center;
+        }
+        
+        #auth-modal h2 {
+            margin-bottom: 1em;
+        }
+        
+        /* FILE BAR STYLES */
+        #file-bar {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            background: #34495e;
+            color: #fff;
+            padding: 10px 0 10px 20px;
+            z-index: 900;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        #file-bar span {
+            margin-right: 20px;
+        }
+        
+        #file-bar input,
+        #file-bar select {
+            padding: 6px 10px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+        
+        #file-bar button {
+            padding: 6px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        /* FIREBASE ERROR MESSAGE */
+        #auth-error {
+            color: #e74c3c;
+            margin-top: 1em;
+            font-size: 0.95em;
+        }
     </style>
 </head>
 <body>
@@ -337,6 +434,163 @@ Type your code in the editor and click "Run Code" or press Ctrl+Enter!
         </div>
     </div>
 
+    <!-- LANDING PAGE MODAL -->
+    <div id="landing-modal" style="position:fixed;z-index:1000;top:0;left:0;width:100vw;height:100vh;background:rgba(44,62,80,0.97);display:flex;align-items:center;justify-content:center;flex-direction:column;">
+      <h1 style="color:#fff;font-size:3em;margin-bottom:0.5em;">🚀 Mitra Codiga</h1>
+      <p style="color:#ecf0f1;font-size:1.3em;max-width:500px;text-align:center;margin-bottom:2em;">
+        Advanced programming language interpreter with real-time web editor, interactive input/output, and file saving. Sign in to save and load your code!
+      </p>
+      <button onclick="showAuthModal()" style="padding:18px 40px;font-size:1.2em;background:#3498db;color:#fff;border:none;border-radius:8px;cursor:pointer;box-shadow:0 2px 8px #222;">Get Started</button>
+    </div>
+
+    <!-- AUTH MODAL -->
+    <div id="auth-modal" style="display:none;position:fixed;z-index:1100;top:0;left:0;width:100vw;height:100vh;background:rgba(44,62,80,0.97);align-items:center;justify-content:center;flex-direction:column;">
+      <div style="background:#fff;padding:2em 2.5em;border-radius:12px;box-shadow:0 4px 24px #222;max-width:350px;text-align:center;">
+        <h2 style="margin-bottom:1em;">Sign In</h2>
+        <button onclick="firebaseGoogleSignIn()" style="width:100%;margin-bottom:1em;padding:12px 0;background:#4285F4;color:#fff;border:none;border-radius:6px;font-size:1em;">Sign in with Google</button>
+        <button onclick="firebaseGithubSignIn()" style="width:100%;margin-bottom:1em;padding:12px 0;background:#333;color:#fff;border:none;border-radius:6px;font-size:1em;">Sign in with GitHub</button>
+        <input id="email-input" type="email" placeholder="Email" style="width:100%;margin-bottom:0.5em;padding:10px;border-radius:4px;border:1px solid #ccc;">
+        <input id="password-input" type="password" placeholder="Password" style="width:100%;margin-bottom:1em;padding:10px;border-radius:4px;border:1px solid #ccc;">
+        <button onclick="firebaseEmailLogin()" style="width:100%;padding:12px 0;background:#27ae60;color:#fff;border:none;border-radius:6px;font-size:1em;margin-bottom:0.5em;">Login with Email</button>
+        <button onclick="firebaseEmailSignUp()" style="width:100%;padding:12px 0;background:#f39c12;color:#fff;border:none;border-radius:6px;font-size:1em;">Sign Up with Email</button>
+        <div id="auth-error" style="color:#e74c3c;margin-top:1em;font-size:0.95em;"></div>
+      </div>
+    </div>
+
+    <!-- FILE SAVE/LOAD UI -->
+    <div id="file-bar" style="display:none;position:fixed;top:0;left:0;width:100vw;background:#34495e;color:#fff;padding:10px 0 10px 20px;z-index:900;align-items:center;gap:10px;">
+      <span id="user-info" style="margin-right:20px;"></span>
+      <input id="filename-input" type="text" placeholder="Filename..." style="padding:6px 10px;border-radius:4px;border:1px solid #ccc;">
+      <button onclick="saveFile()" style="padding:6px 16px;background:#27ae60;color:#fff;border:none;border-radius:4px;">💾 Save</button>
+      <button onclick="loadFileList()" style="padding:6px 16px;background:#2980b9;color:#fff;border:none;border-radius:4px;">📂 Load</button>
+      <select id="file-list" style="margin-left:10px;padding:6px 10px;border-radius:4px;display:none;"></select>
+      <button onclick="logout()" style="float:right;margin-left:30px;padding:6px 16px;background:#e74c3c;color:#fff;border:none;border-radius:4px;">Sign Out</button>
+    </div>
+
+    <!-- FIREBASE SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script>
+        // --- Firebase Config ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyBzhYvnusrYtWj2h8Et15gvBsX-99xZAG4",
+            authDomain: "mitra-codiga.firebaseapp.com",
+            projectId: "mitra-codiga",
+            storageBucket: "mitra-codiga.firebasestorage.app",
+            messagingSenderId: "685176435331",
+            appId: "1:685176435331:web:ae37cb3f30cc839a83a1b6",
+            measurementId: "G-C4G359R631"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        // --- UI Logic ---
+        function showAuthModal() {
+          document.getElementById('landing-modal').style.display = 'none';
+          document.getElementById('auth-modal').style.display = 'flex';
+        }
+        function hideAuthModal() {
+          document.getElementById('auth-modal').style.display = 'none';
+        }
+        function showFileBar(user) {
+          document.getElementById('file-bar').style.display = 'flex';
+          document.getElementById('user-info').textContent = user.displayName || user.email;
+        }
+        function hideFileBar() {
+          document.getElementById('file-bar').style.display = 'none';
+        }
+
+        // --- Auth Logic ---
+        function firebaseGoogleSignIn() {
+          const provider = new firebase.auth.GoogleAuthProvider();
+          auth.signInWithPopup(provider).then(onAuthSuccess).catch(showAuthError);
+        }
+        function firebaseGithubSignIn() {
+          const provider = new firebase.auth.GithubAuthProvider();
+          auth.signInWithPopup(provider).then(onAuthSuccess).catch(showAuthError);
+        }
+        function firebaseEmailLogin() {
+          const email = document.getElementById('email-input').value;
+          const password = document.getElementById('password-input').value;
+          auth.signInWithEmailAndPassword(email, password)
+            .then(onAuthSuccess)
+            .catch(showAuthError);
+        }
+        function firebaseEmailSignUp() {
+          const email = document.getElementById('email-input').value;
+          const password = document.getElementById('password-input').value;
+          auth.createUserWithEmailAndPassword(email, password)
+            .then(onAuthSuccess)
+            .catch(showAuthError);
+        }
+        function showAuthError(err) {
+          document.getElementById('auth-error').textContent = err.message || err;
+        }
+        function onAuthSuccess(result) {
+          hideAuthModal();
+          showFileBar(result.user);
+          window.currentUser = result.user;
+        }
+        function logout() {
+          auth.signOut().then(() => {
+            hideFileBar();
+            document.getElementById('landing-modal').style.display = 'flex';
+            window.currentUser = null;
+          });
+        }
+        auth.onAuthStateChanged(user => {
+          if (user) {
+            hideAuthModal();
+            showFileBar(user);
+            window.currentUser = user;
+          } else {
+            hideFileBar();
+            document.getElementById('landing-modal').style.display = 'flex';
+            window.currentUser = null;
+          }
+        });
+
+        // --- File Save/Load Logic ---
+        function saveFile() {
+          const filename = document.getElementById('filename-input').value.trim();
+          const code = document.getElementById('code-editor').value;
+          if (!window.currentUser || !filename) return alert('Sign in and enter a filename!');
+          db.collection('users').doc(window.currentUser.uid).collection('files').doc(filename).set({ code, updated: new Date() })
+            .then(() => alert('File saved!'))
+            .catch(e => alert('Save failed: ' + e.message));
+        }
+        function loadFileList() {
+          if (!window.currentUser) return;
+          const fileList = document.getElementById('file-list');
+          fileList.innerHTML = '';
+          db.collection('users').doc(window.currentUser.uid).collection('files').get()
+            .then(snapshot => {
+              fileList.style.display = 'inline-block';
+              snapshot.forEach(doc => {
+                const opt = document.createElement('option');
+                opt.value = doc.id;
+                opt.textContent = doc.id;
+                fileList.appendChild(opt);
+              });
+              fileList.onchange = function() {
+                loadFile(fileList.value);
+              };
+            });
+        }
+        function loadFile(filename) {
+          if (!window.currentUser || !filename) return;
+          db.collection('users').doc(window.currentUser.uid).collection('files').doc(filename).get()
+            .then(doc => {
+              if (doc.exists) {
+                document.getElementById('code-editor').value = doc.data().code;
+              }
+            });
+        }
+    </script>
+    <!-- END FIREBASE -->
+    
     <script>
         let examples = [];
         let currentCode = '';
@@ -492,6 +746,4 @@ Type your code in the editor and click "Run Code" or press Ctrl+Enter!
         loadExamples();
     </script>
 </body>
-
 </html>
-
