@@ -1,0 +1,17 @@
+# REPL Input Demo Commands
+
+# These commands show input() working in the interactive shell:
+
+# Basic input:
+let user_name = input("Your name: ")
+
+# Display the input:
+print("Hello", user_name)
+
+# Input with math:
+let x = int(input("Enter a number: "))
+print("Double that is:", x * 2)
+
+# Conditional with input:
+let color = input("Favorite color: ")
+if color == "blue" { print("Great choice!") } else { print("Nice color!") }
