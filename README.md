@@ -159,4 +159,5 @@ Built as an educational project to demonstrate:
 
 ---
 
-**Made with ❤️ and AI assistance**
+**Made with ❤️**
+
