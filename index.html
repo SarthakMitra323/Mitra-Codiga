@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Mitra Codiga: Advanced programming language interpreter with variables, functions, control flow, interactive input/output. Features real-time web editor, REPL mode, educational examples. Perfect for learning language design, prototyping algorithms, and interactive programming. Built with Python.">
+    <title>Mitra Codiga - Online Interpreter</title>
+    <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+    <link rel="manifest" href="site.webmanifest">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(45deg, #2c3e50, #3498db);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0;
+            min-height: 70vh;
+        }
+        
+        .editor-section {
+            padding: 30px;
+            border-right: 2px solid #ecf0f1;
+        }
+        
+        .output-section {
+            padding: 30px;
+            background: #f8f9fa;
+        }
+        
+        .section-title {
+            font-size: 1.4em;
+            margin-bottom: 15px;
+            color: #2c3e50;
+            font-weight: bold;
+        }
+        
+        #code-editor {
+            width: 100%;
+            height: 400px;
+            border: 2px solid #bdc3c7;
+            border-radius: 8px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            resize: vertical;
+            background: #2c3e50;
+            color: #ecf0f1;
+        }
+        
+        #code-editor:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+        
+        .controls {
+            margin: 20px 0;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(45deg, #3498db, #2980b9);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4);
+        }
+        
+        .btn-secondary {
+            background: #95a5a6;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #7f8c8d;
+        }
+        
+        .examples {
+            margin-top: 20px;
+        }
+        
+        .example-btn {
+            display: block;
+            width: 100%;
+            margin: 5px 0;
+            padding: 10px;
+            background: #ecf0f1;
+            border: 1px solid #bdc3c7;
+            border-radius: 4px;
+            cursor: pointer;
+            text-align: left;
+            transition: background 0.3s ease;
+        }
+        
+        .example-btn:hover {
+            background: #d5dbdb;
+        }
+        
+        #output {
+            background: #2c3e50;
+            color: #2ecc71;
+            border: 2px solid #34495e;
+            border-radius: 8px;
+            padding: 20px;
+            height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+        
+        .input-section {
+            margin-top: 10px;
+            display: none;
+        }
+        
+        .input-section.show {
+            display: block;
+        }
+        
+        #input-prompt {
+            color: #f39c12;
+            margin-bottom: 5px;
+        }
+        
+        #user-input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #34495e;
+            border-radius: 4px;
+            background: #34495e;
+            color: #ecf0f1;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .input-controls {
+            margin-top: 5px;
+        }
+        
+        .btn-input {
+            padding: 6px 12px;
+            background: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 5px;
+        }
+        
+        .btn-input:hover {
+            background: #229954;
+        }
+        
+        .error {
+            color: #e74c3c !important;
+        }
+        
+        .loading {
+            color: #f39c12;
+        }
+        
+        .features {
+            padding: 30px;
+            background: #ecf0f1;
+            text-align: center;
+        }
+        
+        .features h3 {
+            margin-bottom: 20px;
+            color: #2c3e50;
+        }
+        
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .feature-item {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .editor-section {
+                border-right: none;
+                border-bottom: 2px solid #ecf0f1;
+            }
+            
+            .controls {
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 Mitra Codiga</h1>
+            <p>Advanced Programming Language Interpreter - Built by ConnectSphere</p>
+        </div>
+        
+        <div class="main-content">
+            <div class="editor-section">
+                <h2 class="section-title">💻 Code Editor</h2>
+                <textarea id="code-editor" placeholder="# Welcome to Mitra Codiga!
+# Try typing some code here:
+
+print(&quot;Hello, World!&quot;)
+let x = 42
+print(&quot;The answer is&quot;, x)
+
+# Use Ctrl+Enter to run your code!"></textarea>
+                
+                <div class="controls">
+                    <button class="btn btn-primary" onclick="runCode()">▶️ Run Code</button>
+                    <button class="btn btn-secondary" onclick="clearEditor()">🗑️ Clear</button>
+                    <button class="btn btn-secondary" onclick="clearOutput()">📄 Clear Output</button>
+                </div>
+                
+                <div class="examples">
+                    <h3>📚 Example Programs</h3>
+                    <div id="example-buttons"></div>
+                </div>
+            </div>
+            
+            <div class="output-section">
+                <h2 class="section-title">📤 Output</h2>
+                <div id="output">Welcome to Mitra Codiga Online Interpreter!
+
+Features:
+✅ Variables: let x = 10
+✅ Functions: fun name(args) { ... }
+✅ Control Flow: if/elif/else, while
+✅ Math: + - * / ** 
+✅ Comparisons: == != < <= > >=
+✅ Logic: and or not
+✅ Built-ins: print, len, int, float, str
+✅ Input Support: input("prompt")
+✅ Strings with escape sequences
+
+Type your code in the editor and click "Run Code" or press Ctrl+Enter!
+</div>
+                
+                <div class="input-section" id="input-section">
+                    <div id="input-prompt">Enter input:</div>
+                    <input type="text" id="user-input" placeholder="Type your input here...">
+                    <div class="input-controls">
+                        <button class="btn-input" onclick="submitInput()">Submit</button>
+                        <button class="btn-input" onclick="cancelInput()">Cancel</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="features">
+            <h3>🌟 Language Features</h3>
+            <div class="feature-grid">
+                <div class="feature-item">
+                    <strong>Variables & Types</strong><br>
+                    Numbers, strings, booleans
+                </div>
+                <div class="feature-item">
+                    <strong>Functions</strong><br>
+                    Define and call custom functions
+                </div>
+                <div class="feature-item">
+                    <strong>Control Flow</strong><br>
+                    if/elif/else, while loops
+                </div>
+                <div class="feature-item">
+                    <strong>Built-ins</strong><br>
+                    print, len, input, type conversions
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let examples = [];
+        let currentCode = '';
+        let currentInputs = [];
+        
+        // Load examples on page load
+        async function loadExamples() {
+            try {
+                const response = await fetch('/api/examples');
+                examples = await response.json();
+                
+                const container = document.getElementById('example-buttons');
+                examples.forEach((example, index) => {
+                    const button = document.createElement('button');
+                    button.className = 'example-btn';
+                    button.textContent = example.name;
+                    button.onclick = () => loadExample(index);
+                    container.appendChild(button);
+                });
+            } catch (error) {
+                console.error('Failed to load examples:', error);
+            }
+        }
+        
+        function loadExample(index) {
+            const editor = document.getElementById('code-editor');
+            editor.value = examples[index].code;
+        }
+        
+        async function runCode() {
+            const code = document.getElementById('code-editor').value;
+            currentCode = code;
+            currentInputs = [];
+            await executeCode();
+        }
+        
+        async function executeCode() {
+            const output = document.getElementById('output');
+            const inputSection = document.getElementById('input-section');
+            
+            if (!currentCode.trim()) {
+                output.textContent = 'Error: No code to execute';
+                output.className = 'error';
+                return;
+            }
+            
+            output.textContent = 'Running...';
+            output.className = 'loading';
+            inputSection.classList.remove('show');
+            
+            try {
+                const response = await fetch('/api/execute', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ 
+                        code: currentCode,
+                        inputs: currentInputs 
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.error) {
+                    output.textContent = result.error;
+                    output.className = 'error';
+                } else if (result.input_needed) {
+                    // Show input prompt
+                    output.textContent = result.output || '';
+                    output.className = '';
+                    showInputPrompt(result.prompt);
+                } else {
+                    let outputText = result.output || '';
+                    if (result.result !== null && result.result !== undefined) {
+                        if (outputText) outputText += '\n';
+                        outputText += `=> ${result.result}`;
+                    }
+                    output.textContent = outputText || '(no output)';
+                    output.className = '';
+                }
+            } catch (error) {
+                output.textContent = `Network error: ${error.message}`;
+                output.className = 'error';
+            }
+        }
+        
+        function showInputPrompt(prompt) {
+            const inputSection = document.getElementById('input-section');
+            const inputPrompt = document.getElementById('input-prompt');
+            const userInput = document.getElementById('user-input');
+            
+            inputPrompt.textContent = prompt;
+            userInput.value = '';
+            inputSection.classList.add('show');
+            userInput.focus();
+        }
+        
+        function submitInput() {
+            const userInput = document.getElementById('user-input');
+            const inputValue = userInput.value;
+            
+            currentInputs.push(inputValue);
+            
+            // Hide input section and continue execution
+            const inputSection = document.getElementById('input-section');
+            inputSection.classList.remove('show');
+            
+            // Continue execution with the new input
+            executeCode();
+        }
+        
+        function cancelInput() {
+            const inputSection = document.getElementById('input-section');
+            const output = document.getElementById('output');
+            
+            inputSection.classList.remove('show');
+            output.textContent = 'Execution cancelled by user.';
+            output.className = 'error';
+        }
+        
+        function clearEditor() {
+            document.getElementById('code-editor').value = '';
+        }
+        
+        function clearOutput() {
+            const output = document.getElementById('output');
+            const inputSection = document.getElementById('input-section');
+            
+            output.textContent = 'Output cleared. Ready for next execution.';
+            output.className = '';
+            inputSection.classList.remove('show');
+            currentInputs = [];
+        }
+        
+        // Keyboard shortcuts
+        document.getElementById('code-editor').addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 'Enter') {
+                e.preventDefault();
+                runCode();
+            }
+        });
+        
+        // Handle Enter key in input field
+        document.getElementById('user-input').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                submitInput();
+            }
+        });
+        
+        // Load examples when page loads
+        loadExamples();
+    </script>
+</body>
+</html>
