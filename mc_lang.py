@@ -20,6 +20,7 @@ TT_PLUS = 'PLUS'
 TT_MINUS = 'MINUS'
 TT_MUL = 'MUL'
 TT_DIV = 'DIV'
+TT_MOD = 'MOD'
 TT_POW = 'POW'
 TT_EQ = 'EQ'              # '='
 TT_EE = 'EE'              # '=='
@@ -35,11 +36,17 @@ TT_RBRACE = 'RBRACE'
 TT_COMMA = 'COMMA'
 TT_SEMI = 'SEMI'
 TT_NEWLINE = 'NEWLINE'
+TT_LSQUARE = 'LSQUARE'
+TT_RSQUARE = 'RSQUARE'
+TT_COLON = 'COLON'
+TT_ARROW = 'ARROW'
+TT_DOT = 'DOT'
 TT_EOF = 'EOF'
 
 KEYWORDS = {
-    'let', 'if', 'elif', 'else', 'while', 'fun', 'return',
-    'true', 'false', 'null', 'and', 'or', 'not'
+    'let', 'if', 'elif', 'else', 'while', 'for', 'in', 'fun', 'return',
+    'true', 'false', 'null', 'and', 'or', 'not', 'break', 'continue',
+    'try', 'catch', 'lambda'
 }
 
 @dataclass
@@ -136,6 +143,9 @@ class Lexer:
             elif self.current_char == '/':
                 tokens.append(Token(TT_DIV, pos_start=self.pos.copy(), pos_end=self.pos.copy()))
                 self.advance()
+            elif self.current_char == '%':
+                tokens.append(Token(TT_MOD, pos_start=self.pos.copy(), pos_end=self.pos.copy()))
+                self.advance()
             elif self.current_char == '(':
                 tokens.append(Token(TT_LPAREN, pos_start=self.pos.copy(), pos_end=self.pos.copy()))
                 self.advance()
@@ -162,6 +172,18 @@ class Lexer:
                 tokens.append(self.make_less())
             elif self.current_char == '>':
                 tokens.append(self.make_greater())
+            elif self.current_char == '[':
+                tokens.append(Token(TT_LSQUARE, pos_start=self.pos.copy(), pos_end=self.pos.copy()))
+                self.advance()
+            elif self.current_char == ']':
+                tokens.append(Token(TT_RSQUARE, pos_start=self.pos.copy(), pos_end=self.pos.copy()))
+                self.advance()
+            elif self.current_char == ':':
+                tokens.append(Token(TT_COLON, pos_start=self.pos.copy(), pos_end=self.pos.copy()))
+                self.advance()
+            elif self.current_char == '.':
+                tokens.append(Token(TT_DOT, pos_start=self.pos.copy(), pos_end=self.pos.copy()))
+                self.advance()
             else:
                 pos_start = self.pos.copy()
                 char = self.current_char
@@ -341,6 +363,51 @@ class BlockNode:
 class NoOpNode:
     pass
 
+@dataclass
+class ListNode:
+    element_nodes: List[Any]
+
+@dataclass
+class IndexAccessNode:
+    node: Any
+    index_node: Any
+
+@dataclass
+class IndexAssignNode:
+    node: Any
+    index_node: Any
+    value_node: Any
+
+@dataclass
+class ForNode:
+    var_name_tok: Token
+    iterable_node: Any
+    body_node: Any
+
+@dataclass
+class BreakNode:
+    pass
+
+@dataclass
+class ContinueNode:
+    pass
+
+@dataclass
+class TryCatchNode:
+    try_body: Any
+    catch_var_tok: Optional[Token]
+    catch_body: Any
+
+@dataclass
+class DotAccessNode:
+    node: Any
+    attr_tok: Token
+
+@dataclass
+class LambdaNode:
+    arg_name_toks: List[Token]
+    body_expr: Any
+
 class Parser:
     def __init__(self, tokens: List[Token]):
         self.tokens = tokens
@@ -377,10 +444,20 @@ class Parser:
                 return ReturnNode(None)
             expr = self.expr()
             return ReturnNode(expr)
+        if tok.type == TT_KEYWORD and tok.value == 'break':
+            self.advance()
+            return BreakNode()
+        if tok.type == TT_KEYWORD and tok.value == 'continue':
+            self.advance()
+            return ContinueNode()
         if tok.type == TT_KEYWORD and tok.value == 'if':
             return self.if_expr()
         if tok.type == TT_KEYWORD and tok.value == 'while':
             return self.while_expr()
+        if tok.type == TT_KEYWORD and tok.value == 'for':
+            return self.for_expr()
+        if tok.type == TT_KEYWORD and tok.value == 'try':
+            return self.try_catch()
         if tok.type == TT_KEYWORD and tok.value == 'fun':
             return self.func_def()
         if tok.type == TT_LBRACE:
@@ -396,14 +473,21 @@ class Parser:
             self.advance()
             value = self.expr()
             return VarAssignNode(name_tok, value)
-        # assignment or expression
+        # Check for simple assignment BEFORE calling expr()
         if tok.type == TT_IDENTIFIER and self.peek_type() == TT_EQ:
             name_tok = tok
             self.advance()  # name
             self.advance()  # '='
             value = self.expr()
             return VarAssignNode(name_tok, value)
-        return self.expr()
+        # Now parse expression (could be indexed access or regular expression)
+        expr_or_assign = self.expr()
+        # Check for indexed assignment like arr[0] = value
+        if isinstance(expr_or_assign, IndexAccessNode) and self.current_tok.type == TT_EQ:
+            self.advance()
+            value = self.expr()
+            return IndexAssignNode(expr_or_assign.node, expr_or_assign.index_node, value)
+        return expr_or_assign
 
     def block(self) -> BlockNode:
         # assumes current token is '{'
@@ -447,6 +531,37 @@ class Parser:
         body = self.block_or_single_stmt()
         return WhileNode(cond, body)
 
+    def for_expr(self) -> ForNode:
+        self.advance()  # skip 'for'
+        if self.current_tok.type != TT_IDENTIFIER:
+            raise ParseError(self.current_tok, "Expected variable name after 'for'")
+        var_name = self.current_tok
+        self.advance()
+        if not (self.current_tok.type == TT_KEYWORD and self.current_tok.value == 'in'):
+            raise ParseError(self.current_tok, "Expected 'in' in for loop")
+        self.advance()
+        iterable = self.expr()
+        body = self.block_or_single_stmt()
+        return ForNode(var_name, iterable, body)
+
+    def try_catch(self) -> TryCatchNode:
+        self.advance()  # skip 'try'
+        try_body = self.block_or_single_stmt()
+        catch_var = None
+        catch_body = None
+        if self.current_tok.type == TT_KEYWORD and self.current_tok.value == 'catch':
+            self.advance()
+            if self.current_tok.type == TT_LPAREN:
+                self.advance()
+                if self.current_tok.type == TT_IDENTIFIER:
+                    catch_var = self.current_tok
+                    self.advance()
+                if self.current_tok.type != TT_RPAREN:
+                    raise ParseError(self.current_tok, "Expected ')'")
+                self.advance()
+            catch_body = self.block_or_single_stmt()
+        return TryCatchNode(try_body, catch_var, catch_body)
+
     def func_def(self) -> FuncDefNode:
         self.advance()  # skip 'fun'
         name_tok: Optional[Token] = None
@@ -480,7 +595,28 @@ class Parser:
         return BlockNode([stmt])
 
     def expr(self):
+        # Check for lambda
+        if self.current_tok.type == TT_KEYWORD and self.current_tok.value == 'lambda':
+            return self.lambda_expr()
         return self.bin_op(self.comp_expr, ((TT_KEYWORD, 'and'), (TT_KEYWORD, 'or')))
+
+    def lambda_expr(self) -> LambdaNode:
+        self.advance()  # skip 'lambda'
+        arg_name_toks: List[Token] = []
+        if self.current_tok.type == TT_IDENTIFIER:
+            arg_name_toks.append(self.current_tok)
+            self.advance()
+            while self.current_tok.type == TT_COMMA:
+                self.advance()
+                if self.current_tok.type != TT_IDENTIFIER:
+                    raise ParseError(self.current_tok, 'Expected parameter name')
+                arg_name_toks.append(self.current_tok)
+                self.advance()
+        if self.current_tok.type != TT_COLON:
+            raise ParseError(self.current_tok, "Expected ':' after lambda parameters")
+        self.advance()
+        body_expr = self.comp_expr()
+        return LambdaNode(arg_name_toks, body_expr)
 
     def comp_expr(self):
         if self.current_tok.type == TT_KEYWORD and self.current_tok.value == 'not':
@@ -495,7 +631,7 @@ class Parser:
         return self.bin_op(self.term, (TT_PLUS, TT_MINUS))
 
     def term(self):
-        return self.bin_op(self.power, (TT_MUL, TT_DIV))
+        return self.bin_op(self.power, (TT_MUL, TT_DIV, TT_MOD))
 
     def power(self):
         return self.bin_op(self.factor, (TT_POW,), right_assoc=True)
@@ -510,18 +646,38 @@ class Parser:
 
     def call(self):
         atom = self.atom()
-        while self.current_tok.type == TT_LPAREN:
-            self.advance()
-            arg_nodes: List[Any] = []
-            if self.current_tok.type != TT_RPAREN:
-                arg_nodes.append(self.expr())
-                while self.current_tok.type == TT_COMMA:
-                    self.advance()
+        while True:
+            if self.current_tok.type == TT_LPAREN:
+                # Function call
+                self.advance()
+                arg_nodes: List[Any] = []
+                if self.current_tok.type != TT_RPAREN:
                     arg_nodes.append(self.expr())
-            if self.current_tok.type != TT_RPAREN:
-                raise ParseError(self.current_tok, "Expected ')' after arguments")
-            self.advance()
-            atom = CallNode(atom, arg_nodes)
+                    while self.current_tok.type == TT_COMMA:
+                        self.advance()
+                        arg_nodes.append(self.expr())
+                if self.current_tok.type != TT_RPAREN:
+                    raise ParseError(self.current_tok, "Expected ')' after arguments")
+                self.advance()
+                atom = CallNode(atom, arg_nodes)
+            elif self.current_tok.type == TT_LSQUARE:
+                # Index access
+                self.advance()
+                index_expr = self.expr()
+                if self.current_tok.type != TT_RSQUARE:
+                    raise ParseError(self.current_tok, "Expected ']'")
+                self.advance()
+                atom = IndexAccessNode(atom, index_expr)
+            elif self.current_tok.type == TT_DOT:
+                # Dot access for methods/properties
+                self.advance()
+                if self.current_tok.type != TT_IDENTIFIER:
+                    raise ParseError(self.current_tok, "Expected attribute name after '.'")
+                attr_tok = self.current_tok
+                self.advance()
+                atom = DotAccessNode(atom, attr_tok)
+            else:
+                break
         return atom
 
     def atom(self):
@@ -549,6 +705,21 @@ class Parser:
             return expr
         if tok.type == TT_LBRACE:
             return self.block()
+        if tok.type == TT_LSQUARE:
+            # List literal
+            self.advance()
+            element_nodes: List[Any] = []
+            if self.current_tok.type != TT_RSQUARE:
+                element_nodes.append(self.expr())
+                while self.current_tok.type == TT_COMMA:
+                    self.advance()
+                    if self.current_tok.type == TT_RSQUARE:  # trailing comma
+                        break
+                    element_nodes.append(self.expr())
+            if self.current_tok.type != TT_RSQUARE:
+                raise ParseError(self.current_tok, "Expected ']'")
+            self.advance()
+            return ListNode(element_nodes)
         raise ParseError(tok, 'Expected expression')
 
     def bin_op(self, func, ops, right_assoc: bool=False):
@@ -597,6 +768,12 @@ class ReturnSignal(Exception):
     def __init__(self, value: Any):
         self.value = value
 
+class BreakSignal(Exception):
+    pass
+
+class ContinueSignal(Exception):
+    pass
+
 class Function:
     def __init__(self, name: Optional[str], arg_names: List[str], body: BlockNode, parent: 'SymbolTable'):
         self.name = name
@@ -643,6 +820,21 @@ class Interpreter:
         syms.set('int', lambda x: int(x))
         syms.set('float', lambda x: float(x))
         syms.set('str', lambda x: str(x))
+        syms.set('type', lambda x: type(x).__name__)
+        syms.set('range', lambda *args: list(range(*args)))
+        syms.set('map', lambda f, lst: list(map(f, lst)))
+        syms.set('filter', lambda f, lst: list(filter(f, lst)))
+        syms.set('sum', lambda lst: sum(lst))
+        syms.set('min', lambda *args: min(*args) if len(args) > 1 else min(args[0]) if len(args) == 1 else (_ for _ in ()).throw(ValueError("min() arg is an empty sequence")))
+        syms.set('max', lambda *args: max(*args) if len(args) > 1 else max(args[0]) if len(args) == 1 and len(args[0]) > 0 else (_ for _ in ()).throw(ValueError("max() arg is an empty sequence")))
+        syms.set('abs', lambda x: abs(x))
+        syms.set('round', lambda x, n=0: round(x, n))
+        syms.set('sorted', lambda lst, reverse=False: sorted(lst, reverse=reverse))
+        syms.set('reversed', lambda lst: list(reversed(lst)))
+        syms.set('enumerate', lambda lst: list(enumerate(lst)))
+        syms.set('zip', lambda *lsts: list(zip(*lsts)))
+        syms.set('all', lambda lst: all(lst))
+        syms.set('any', lambda lst: any(lst))
         syms.set('true', True)
         syms.set('false', False)
         syms.set('null', None)
@@ -667,6 +859,8 @@ class Interpreter:
             return node.tok.value
         if t is StringNode:
             return node.tok.value
+        if t is ListNode:
+            return [self.visit(el, symbols) for el in node.element_nodes]
         if t is VarAccessNode:
             name = node.name_tok.value if node.name_tok.type == TT_IDENTIFIER else node.name_tok.value
             return symbols.get(name)
@@ -675,6 +869,66 @@ class Interpreter:
             val = self.visit(node.value_node, symbols)
             symbols.set(name, val)
             return val
+        if t is IndexAccessNode:
+            obj = self.visit(node.node, symbols)
+            index = self.visit(node.index_node, symbols)
+            try:
+                return obj[index]
+            except (KeyError, IndexError, TypeError) as e:
+                raise RTError(f'Index error: {e}')
+        if t is IndexAssignNode:
+            obj = self.visit(node.node, symbols)
+            index = self.visit(node.index_node, symbols)
+            value = self.visit(node.value_node, symbols)
+            try:
+                obj[index] = value
+                return value
+            except (KeyError, IndexError, TypeError) as e:
+                raise RTError(f'Index assignment error: {e}')
+        if t is DotAccessNode:
+            obj = self.visit(node.node, symbols)
+            attr_name = node.attr_tok.value
+            # String methods
+            if isinstance(obj, str):
+                if attr_name == 'upper':
+                    return lambda: obj.upper()
+                elif attr_name == 'lower':
+                    return lambda: obj.lower()
+                elif attr_name == 'split':
+                    return lambda sep=' ': obj.split(sep)
+                elif attr_name == 'strip':
+                    return lambda: obj.strip()
+                elif attr_name == 'replace':
+                    return lambda old, new: obj.replace(old, new)
+                elif attr_name == 'startswith':
+                    return lambda prefix: obj.startswith(prefix)
+                elif attr_name == 'endswith':
+                    return lambda suffix: obj.endswith(suffix)
+                elif attr_name == 'find':
+                    return lambda sub: obj.find(sub)
+                elif attr_name == 'count':
+                    return lambda sub: obj.count(sub)
+            # List methods
+            elif isinstance(obj, list):
+                if attr_name == 'append':
+                    return lambda x: obj.append(x)
+                elif attr_name == 'pop':
+                    return lambda idx=-1: obj.pop(idx)
+                elif attr_name == 'insert':
+                    return lambda idx, x: obj.insert(idx, x)
+                elif attr_name == 'remove':
+                    return lambda x: obj.remove(x)
+                elif attr_name == 'clear':
+                    return lambda: obj.clear()
+                elif attr_name == 'reverse':
+                    return lambda: obj.reverse()
+                elif attr_name == 'sort':
+                    return lambda reverse=False: obj.sort(reverse=reverse)
+                elif attr_name == 'index':
+                    return lambda x: obj.index(x)
+                elif attr_name == 'join':
+                    return lambda sep: sep.join(str(x) for x in obj)
+            raise RTError(f"Object has no attribute '{attr_name}'")
         if t is BinOpNode:
             left = self.visit(node.left, symbols)
             right = self.visit(node.right, symbols)
@@ -698,9 +952,43 @@ class Interpreter:
         if t is WhileNode:
             last = None
             while truthy(self.visit(node.cond, symbols)):
-                # Execute while-body in the same scope so assignments persist
-                last = self.exec_block(node.body, symbols)
+                try:
+                    last = self.exec_block(node.body, symbols)
+                except BreakSignal:
+                    break
+                except ContinueSignal:
+                    continue
             return last
+        if t is ForNode:
+            iterable = self.visit(node.iterable_node, symbols)
+            var_name = node.var_name_tok.value
+            last = None
+            try:
+                for item in iterable:
+                    symbols.set(var_name, item)
+                    try:
+                        last = self.exec_block(node.body_node, symbols)
+                    except BreakSignal:
+                        break
+                    except ContinueSignal:
+                        continue
+            except TypeError:
+                raise RTError('For loop requires an iterable')
+            return last
+        if t is BreakNode:
+            raise BreakSignal()
+        if t is ContinueNode:
+            raise ContinueSignal()
+        if t is TryCatchNode:
+            try:
+                return self.exec_block(node.try_body, SymbolTable(symbols))
+            except (RTError, Exception) as e:
+                if node.catch_body:
+                    catch_symbols = SymbolTable(symbols)
+                    if node.catch_var_tok:
+                        catch_symbols.set(node.catch_var_tok.value, str(e))
+                    return self.exec_block(node.catch_body, catch_symbols)
+                raise
         if t is FuncDefNode:
             name = node.name_tok.value if node.name_tok else None
             args = [t.value for t in node.arg_name_toks]
@@ -708,6 +996,25 @@ class Interpreter:
             if name:
                 symbols.set(name, fn)
             return fn
+        if t is LambdaNode:
+            args = [t.value for t in node.arg_name_toks]
+            # Lambda is an expression, not a block
+            class LambdaFunction:
+                def __init__(self, arg_names, body_expr, parent_symbols, interpreter):
+                    self.arg_names = arg_names
+                    self.body_expr = body_expr
+                    self.parent = parent_symbols
+                    self.interpreter = interpreter
+                def __call__(self, *args):
+                    if len(args) != len(self.arg_names):
+                        raise RTError(f"Lambda expected {len(self.arg_names)} args, got {len(args)}")
+                    lamb_symbols = SymbolTable(self.parent)
+                    for n, v in zip(self.arg_names, args):
+                        lamb_symbols.set(n, v)
+                    return self.interpreter.visit(self.body_expr, lamb_symbols)
+                def __repr__(self):
+                    return f"<lambda({', '.join(self.arg_names)})>"
+            return LambdaFunction(args, node.body_expr, symbols, self)
         if t is CallNode:
             callee = self.visit(node.node_to_call, symbols)
             args = [self.visit(a, symbols) for a in node.arg_nodes]
@@ -735,6 +1042,8 @@ class Interpreter:
             return left * right
         if t == TT_DIV:
             return left / right
+        if t == TT_MOD:
+            return left % right
         if t == TT_POW:
             return left ** right
         if t == TT_EE:
