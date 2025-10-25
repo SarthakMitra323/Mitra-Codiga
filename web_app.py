@@ -59,6 +59,21 @@ def execute_code():
                 syms.set('int', lambda x: int(x))
                 syms.set('float', lambda x: float(x))
                 syms.set('str', lambda x: str(x))
+                syms.set('type', lambda x: type(x).__name__)
+                syms.set('range', lambda *args: list(range(*args)))
+                syms.set('map', lambda f, lst: list(map(f, lst)))
+                syms.set('filter', lambda f, lst: list(filter(f, lst)))
+                syms.set('sum', lambda lst: sum(lst))
+                syms.set('min', lambda *args: min(*args) if len(args) > 1 else min(args[0]) if len(args) == 1 else (_ for _ in ()).throw(ValueError("min() arg is an empty sequence")))
+                syms.set('max', lambda *args: max(*args) if len(args) > 1 else max(args[0]) if len(args) == 1 and len(args[0]) > 0 else (_ for _ in ()).throw(ValueError("max() arg is an empty sequence")))
+                syms.set('abs', lambda x: abs(x))
+                syms.set('round', lambda x, n=0: round(x, n))
+                syms.set('sorted', lambda lst, reverse=False: sorted(lst, reverse=reverse))
+                syms.set('reversed', lambda lst: list(reversed(lst)))
+                syms.set('enumerate', lambda lst: list(enumerate(lst)))
+                syms.set('zip', lambda *lsts: list(zip(*lsts)))
+                syms.set('all', lambda lst: all(lst))
+                syms.set('any', lambda lst: any(lst))
                 syms.set('true', True)
                 syms.set('false', False)
                 syms.set('null', None)
@@ -106,24 +121,40 @@ def get_examples():
             'code': 'print("Hello, World!")\nlet x = 42\nprint("The answer is", x)'
         },
         {
+            'name': 'Lists & Arrays',
+            'code': '# Create a list\nlet nums = [1, 2, 3, 4, 5]\nprint("List:", nums)\nprint("First:", nums[0])\nprint("Length:", len(nums))\n\n# List methods\nnums.append(6)\nprint("After append:", nums)\n\n# List operations\nprint("Sum:", sum(nums))\nprint("Max:", max(nums))\nprint("Sorted:", sorted([5, 2, 8, 1]))'
+        },
+        {
+            'name': 'For Loops',
+            'code': 'print("=== For Loop Examples ===")\n\n# Loop through list\nfor x in [1, 2, 3, 4, 5] {\n    print("Number:", x)\n}\n\nprint("\\nUsing range:")\nfor i in range(5) {\n    print(i)\n}\n\nprint("\\nWith break & continue:")\nfor i in range(10) {\n    if i == 3 { continue }\n    if i == 7 { break }\n    print(i)\n}'
+        },
+        {
+            'name': 'Lambda Functions',
+            'code': '# Lambda basics\nlet square = lambda x: x * x\nprint("Square of 5:", square(5))\n\nlet add = lambda a, b: a + b\nprint("Add 3 + 7:", add(3, 7))\n\n# Lambda with map\nlet nums = [1, 2, 3, 4, 5]\nlet doubled = map(lambda x: x * 2, nums)\nprint("Doubled:", doubled)\n\n# Lambda with filter\nlet evens = filter(lambda x: x % 2 == 0, nums)\nprint("Even numbers:", evens)'
+        },
+        {
+            'name': 'String Methods',
+            'code': 'let text = "Hello World"\nprint("Original:", text)\nprint("Upper:", text.upper())\nprint("Lower:", text.lower())\nprint("Split:", text.split(" "))\nprint("Replace:", text.replace("World", "Mitra"))\n\nlet data = "  hello  "\nprint("Strip:", data.strip())\nprint("Starts with \'He\':", text.startswith("He"))'
+        },
+        {
+            'name': 'Try-Catch',
+            'code': 'print("=== Error Handling ===")\n\ntry {\n    let result = 10 / 0\n    print("This won\'t run")\n} catch (err) {\n    print("Caught error:", err)\n}\n\nprint("Program continues...")\n\ntry {\n    let safe = 10 / 2\n    print("Safe division:", safe)\n} catch (err) {\n    print("No error here")\n}\n\nprint("Done!")'
+        },
+        {
+            'name': 'FizzBuzz',
+            'code': 'print("=== FizzBuzz ===\")\nfor i in range(1, 21) {\n    if i % 15 == 0 {\n        print("FizzBuzz")\n    } elif i % 3 == 0 {\n        print("Fizz")\n    } elif i % 5 == 0 {\n        print("Buzz")\n    } else {\n        print(i)\n    }\n}'
+        },
+        {
+            'name': 'Calculator',
+            'code': 'fun add(a, b) { return a + b }\nfun multiply(a, b) { return a * b }\nfun divide(a, b) {\n    if b == 0 {\n        return "Error: Division by zero"\n    }\n    return a / b\n}\n\nlet x = 5\nlet y = 3\nprint("Sum:", add(x, y))\nprint("Product:", multiply(x, y))\nprint("Division:", divide(x, y))\nprint("Division by 0:", divide(x, 0))'
+        },
+        {
             'name': 'Interactive Input',
             'code': 'let name = input("What\'s your name? ")\nprint("Hello,", name, "!")\n\nlet age = int(input("How old are you? "))\nif age >= 18 {\n    print("You are an adult!")\n} else {\n    print("You are", 18 - age, "years away from being an adult")\n}'
         },
         {
-            'name': 'Calculator',
-            'code': 'fun add(a, b) { return a + b }\nfun multiply(a, b) { return a * b }\n\nlet x = 5\nlet y = 3\nprint("Sum:", add(x, y))\nprint("Product:", multiply(x, y))'
-        },
-        {
-            'name': 'Fibonacci',
-            'code': 'fun fib(n) {\n    if n <= 1 { return n }\n    let a = 0\n    let b = 1\n    let i = 2\n    while i <= n {\n        let temp = a + b\n        a = b\n        b = temp\n        i = i + 1\n    }\n    return b\n}\n\nprint("Fibonacci sequence:")\nlet i = 0\nwhile i < 10 {\n    print("fib(" + str(i) + ") =", fib(i))\n    i = i + 1\n}'
-        },
-        {
-            'name': 'Control Flow',
-            'code': 'let score = 85\n\nif score >= 90 {\n    print("Grade: A")\n} elif score >= 80 {\n    print("Grade: B")\n} elif score >= 70 {\n    print("Grade: C")\n} else {\n    print("Grade: F")\n}\n\nlet countdown = 5\nprint("\\nCountdown:")\nwhile countdown > 0 {\n    print(countdown)\n    countdown = countdown - 1\n}\nprint("Blast off!")'
-        },
-        {
-            'name': 'Interactive Quiz',
-            'code': 'print("=== Math Quiz ===")\nlet score = 0\n\nlet answer1 = int(input("What is 5 + 3? "))\nif answer1 == 8 {\n    print("Correct!")\n    score = score + 1\n} else {\n    print("Wrong! The answer is 8")\n}\n\nlet answer2 = int(input("What is 7 * 6? "))\nif answer2 == 42 {\n    print("Correct!")\n    score = score + 1\n} else {\n    print("Wrong! The answer is 42")\n}\n\nprint("Your score:", score, "out of 2")\nif score == 2 {\n    print("Perfect score! 🎉")\n} elif score == 1 {\n    print("Good job! 👍")\n} else {\n    print("Keep practicing! 📚")\n}'
+            'name': 'Advanced: Nested Lists',
+            'code': '# Matrix example\nlet matrix = [[1, 2, 3], [4, 5, 6], [7, 8, 9]]\nprint("Matrix:", matrix)\nprint("Row 0:", matrix[0])\nprint("Element [1][2]:", matrix[1][2])\n\n# Modify nested list\nmatrix[0][0] = 100\nprint("Modified:", matrix)\n\n# List of names\nlet names = ["Alice", "Bob", "Charlie"]\nfor name in names {\n    print("Hello,", name)\n}'
         }
     ]
     return jsonify(examples)
