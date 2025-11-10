@@ -1,0 +1,123 @@
+# Mitra Codiga Torture Test - exercises most language features
+
+print("=== TORTURE TEST START ===")
+
+# Variables & arithmetic
+let a = 10
+let b = 3
+print("math:", a + b, a - b, a * b, a / b, a % b, a ** b)
+
+# Booleans, null, comparisons, logic
+let t = true
+let f = false
+let n = null
+print("logic:", (a > b) and t, (a < b) or f, not f, n)
+
+# Strings and methods
+let s = "  hello world  "
+print(s.upper(), s.lower(), s.strip(), s.replace("world", "mitra"), s.startswith("  he"), s.endswith("  "))
+print("split:", "a,b,c".split(","), "count:", "banana".count("a"), "find:", "banana".find("na"))
+
+# Lists: creation, nested, methods
+let nums = [5, 1, 4, 2, 3]
+let nested = [[1,2],[3,4],[5,[6,7]]]
+nums.append(6)
+nums.insert(0, 9)
+nums.remove(4)
+print("nums:", nums)
+print("index of 3:", nums.index(3))
+nums.sort()
+nums.reverse()
+print("sorted+reversed:", nums)
+print("join:", ["a","b","c"].join("-"))
+
+# Indexing & assignment (lists, dicts)
+nums[1] = 42
+print("mutated nums:", nums)
+print("nested access:", nested[2][1][0])
+
+# Dictionaries: shorthand, keyword, constructor, methods
+let user = { name: "Alice", age: 30 }
+user["city"] = "Paris"
+print("user:", user, user.keys(), user.values(), user.items(), user.get("age"), user.has("name"))
+user.set("hobby", "music")
+print("after set:", user)
+let cfg = dict { theme: "dark", version: 1 }
+let meta = dict(author="Sarthak", year=2025)
+print("cfg/meta:", cfg, meta)
+
+# Functions & lambdas
+fun fact(n) {
+    if n <= 1 { return 1 }
+    return n * fact(n - 1)
+}
+print("fact(6):", fact(6))
+
+let square = lambda x: x * x
+let add = lambda x, y: x + y
+print("square/add:", square(9), add(3,7))
+let nums2 = [1,2,3,4,5]
+let doubled = map(lambda x: x * 2, nums2)
+let evens = filter(lambda x: (x % 2 == 0) and (x > 2), nums2)
+print("map/filter:", doubled, evens)
+
+# for-in, break, continue
+for i in range(10) {
+    if i == 2 { continue }
+    if i == 6 { break }
+    print("loop:", i)
+}
+
+# while
+let c = 0
+while c < 3 {
+    print("while:", c)
+    c = c + 1
+}
+
+# enumerate, zip, reversed, sorted
+print("enumerate:", enumerate(["x","y"]))
+print("zip:", zip([1,2,3], ["a","b","c"]))
+print("sorted nums2:", sorted(nums2), "reversed nums2:", reversed(nums2))
+
+# sum/min/max/abs/round/all/any/type
+print("sum/min/max:", sum(nums2), min(nums2), max(nums2))
+print("abs/round:", abs(-3.14), round(3.14159, 3))
+print("all/any:", all([true, true, false]), any([false, false, true]))
+print("type:", type(nums2), type(user), type(s))
+
+# try/catch
+try {
+    let z = 1 / 0
+    print("unreachable", z)
+} catch (err) {
+    print("caught:", err)
+}
+
+# JSON & time
+let obj = json_parse("{\"a\":1,\"b\":[1,2,3],\"ok\":true}")
+print("json obj:", obj)
+print("json stringify:", json_stringify(obj))
+print("now/timestamp:", now(), timestamp())
+
+# File IO (CLI only) - use a temp file name
+let path = "torture_tmp.txt"
+write_file(path, "start")
+append_file(path, ",more")
+let content = read_file(path)
+print("file content:", content)
+
+# Import module (relative path)
+let m = import "math_utils.mc"
+print("module keys:", m.keys())
+print("module add/mul:", m["add"](2,3), m["mul"](3,4), m["PI"]) 
+
+# Index assign on dict using constructor
+let dyn = dict(a=1, b=2)
+dyn["a"] = 100
+print("dyn:", dyn)
+
+# Complex expression using and/or/not and comparisons
+print("complex logic:", (5 < 10 and 10 <= 10) or not false)
+
+print("=== TORTURE TEST END ===")
