@@ -21,7 +21,7 @@ An advanced, educational programming language interpreter built in Python. Featu
 ### Local Installation
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/SarthakMitra323/Mitra-Codiga.git
 cd mitra-codiga
 ```
 
@@ -76,7 +76,7 @@ while i < 5 {
 
 ### 2. **Heroku** 
 ```bash
-# Add these files (already included):
+# Add these files:
 # - Procfile
 # - requirements.txt
 # - runtime.txt
@@ -160,4 +160,5 @@ Built as an educational project to demonstrate:
 ---
 
 **Made with ❤️**
+
 
