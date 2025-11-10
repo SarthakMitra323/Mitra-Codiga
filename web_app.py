@@ -77,6 +77,17 @@ def execute_code():
                 syms.set('true', True)
                 syms.set('false', False)
                 syms.set('null', None)
+                # Stdlib (restricted for web: file IO disabled for safety)
+                import json, time
+                syms.set('json_parse', lambda s: json.loads(s))
+                syms.set('json_stringify', lambda v: json.dumps(v))
+                syms.set('now', lambda: time.strftime('%Y-%m-%dT%H:%M:%S', time.localtime()))
+                syms.set('timestamp', lambda: int(time.time()))
+                syms.set('sleep', lambda sec: time.sleep(sec))
+                # File IO placeholders (return error message strings)
+                syms.set('read_file', lambda path: f"Error: read_file disabled in web sandbox: {path}")
+                syms.set('write_file', lambda path, text: f"Error: write_file disabled in web sandbox: {path}")
+                syms.set('append_file', lambda path, text: f"Error: append_file disabled in web sandbox: {path}")
         
         # Parse and execute with custom interpreter
         try:
@@ -105,10 +116,33 @@ def execute_code():
                 'output': '\n'.join(interpreter.captured_output) if 'interpreter' in locals() else ''
             })
             
+        except (LexerError, ParseError) as e:
+            # Structured syntax/parse error with line/col/snippet
+            try:
+                # Extract positions
+                if isinstance(e, LexerError):
+                    ps, pe = e.pos_start, e.pos_end
+                    err_type = 'lexer'
+                else:
+                    tok = e.token
+                    ps, pe = tok.pos_start, tok.pos_end
+                    err_type = 'parse'
+                line = ps.ln + 1 if ps else None
+                col = ps.col if ps else None
+                from mc_lang import get_snippet
+                snippet = get_snippet(ps.ftxt if ps else code, ps, pe) if ps and pe else None
+                return jsonify({'error': str(e), 'error_detail': {
+                    'type': err_type,
+                    'line': line,
+                    'col': col,
+                    'snippet': snippet
+                }})
+            except Exception:
+                return jsonify({'error': str(e)})
+        except RTError as e:
+            return jsonify({'error': f"Runtime Error: {e}", 'error_detail': {'type': 'runtime'}})
         except Exception as e:
-            # Handle any parsing or runtime errors
-            error_msg = str(e)
-            return jsonify({'error': error_msg})
+            return jsonify({'error': f"Server Error: {e}", 'error_detail': {'type': 'server'}})
             
     except Exception as e:
         return jsonify({'error': f'Server error: {str(e)}'})
@@ -131,6 +165,18 @@ def get_examples():
         {
             'name': 'Lambda Functions',
             'code': '# Lambda basics\nlet square = lambda x: x * x\nprint("Square of 5:", square(5))\n\nlet add = lambda a, b: a + b\nprint("Add 3 + 7:", add(3, 7))\n\n# Lambda with map\nlet nums = [1, 2, 3, 4, 5]\nlet doubled = map(lambda x: x * 2, nums)\nprint("Doubled:", doubled)\n\n# Lambda with filter\nlet evens = filter(lambda x: x % 2 == 0, nums)\nprint("Even numbers:", evens)'
+        },
+        {
+            'name': 'Dictionaries',
+            'code': '# Dictionary examples\nlet user = { name: "Alice", age: 30 }\nprint("User name:", user["name"])\nprint("Keys:", user.keys())\nuser["city"] = "Paris"\nprint("Updated:", user)\nlet cfg = dict(theme="dark", version=1)\nprint("Config:", cfg)'
+        },
+        {
+            'name': 'Import Module',
+            'code': '# Assuming math_utils.mc exists with fun add(a,b){ return a+b }\nlet m = import "math_utils.mc"\nprint("Module keys:", m.keys())\nprint("Add via module:", m["add"](2,3))'
+        },
+        {
+            'name': 'JSON & Time',
+            'code': '# JSON & time built-ins\nlet obj = json_parse("{\\"x\\":10,\\"y\\":20}")\nprint("Obj:", obj)\nprint("Stringify:", json_stringify(obj))\nprint("Now:", now())\nprint("Timestamp:", timestamp())'
         },
         {
             'name': 'String Methods',
