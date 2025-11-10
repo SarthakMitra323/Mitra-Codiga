@@ -46,7 +46,7 @@ TT_EOF = 'EOF'
 KEYWORDS = {
     'let', 'if', 'elif', 'else', 'while', 'for', 'in', 'fun', 'return',
     'true', 'false', 'null', 'and', 'or', 'not', 'break', 'continue',
-    'try', 'catch', 'lambda'
+    'try', 'catch', 'lambda', 'dict', 'import'
 }
 
 @dataclass
@@ -368,6 +368,15 @@ class ListNode:
     element_nodes: List[Any]
 
 @dataclass
+class DictNode:
+    key_nodes: List[Any]
+    value_nodes: List[Any]
+
+@dataclass
+class ImportNode:
+    path_node: Any  # string node
+
+@dataclass
 class IndexAccessNode:
     node: Any
     index_node: Any
@@ -461,6 +470,10 @@ class Parser:
         if tok.type == TT_KEYWORD and tok.value == 'fun':
             return self.func_def()
         if tok.type == TT_LBRACE:
+            # Disambiguate: shorthand dict literal vs block
+            if self.is_dict_literal_ahead_after_lbrace():
+                # Parse as expression to produce a DictNode
+                return self.expr()
             return self.block()
         if tok.type == TT_KEYWORD and tok.value == 'let':
             self.advance()
@@ -615,7 +628,8 @@ class Parser:
         if self.current_tok.type != TT_COLON:
             raise ParseError(self.current_tok, "Expected ':' after lambda parameters")
         self.advance()
-        body_expr = self.comp_expr()
+        # Allow full expressions in lambda bodies (including and/or)
+        body_expr = self.expr()
         return LambdaNode(arg_name_toks, body_expr)
 
     def comp_expr(self):
@@ -688,6 +702,24 @@ class Parser:
         if tok.type == TT_STRING:
             self.advance()
             return StringNode(tok)
+        if tok.type == TT_KEYWORD and tok.value == 'import':
+            # allow import as an expression producing a module dict
+            self.advance()
+            if self.current_tok.type != TT_STRING:
+                raise ParseError(self.current_tok, 'Expected string literal after import')
+            path_tok = self.current_tok
+            self.advance()
+            return ImportNode(StringNode(path_tok))
+        if tok.type == TT_KEYWORD and tok.value == 'dict':
+            # Support two forms:
+            # 1) dict { key: value, ... }
+            # 2) dict(a=1, b=2)  -- functional constructor
+            self.advance()  # consume 'dict'
+            if self.current_tok.type == TT_LBRACE:
+                return self.parse_brace_dict()
+            if self.current_tok.type == TT_LPAREN:
+                return self.parse_dict_constructor()
+            raise ParseError(self.current_tok, "Expected '{' or '(' after 'dict'")
         if tok.type == TT_IDENTIFIER:
             self.advance()
             return VarAccessNode(tok)
@@ -704,6 +736,9 @@ class Parser:
             self.advance()
             return expr
         if tok.type == TT_LBRACE:
+            # Ambiguity: could be a block or a shorthand dict literal { a: 1 }
+            if self.is_dict_literal_ahead_after_lbrace():
+                return self.parse_brace_dict()
             return self.block()
         if tok.type == TT_LSQUARE:
             # List literal
@@ -721,6 +756,106 @@ class Parser:
             self.advance()
             return ListNode(element_nodes)
         raise ParseError(tok, 'Expected expression')
+
+    def dict_key(self):
+        # Allow string or identifier as key; identifiers convert to their string names
+        if self.current_tok.type == TT_STRING:
+            node = StringNode(self.current_tok)
+            self.advance()
+            return node
+        if self.current_tok.type == TT_IDENTIFIER:
+            # convert identifier token to string node of its value
+            tok = self.current_tok
+            self.advance()
+            return StringNode(Token(TT_STRING, tok.value, tok.pos_start, tok.pos_end))
+        raise ParseError(self.current_tok, 'Expected string or identifier as dict key')
+
+    def is_dict_literal_ahead_after_lbrace(self) -> bool:
+        # Look ahead after '{' to determine if this is a dict literal or a block
+        i = self.tok_idx + 1
+        # skip newlines/semicolons
+        while i < len(self.tokens) and self.tokens[i].type in (TT_NEWLINE, TT_SEMI):
+            i += 1
+        if i >= len(self.tokens):
+            return False
+        t1 = self.tokens[i]
+        if t1.type == TT_RBRACE:
+            # '{}' treat as empty dict in expression context
+            return True
+        if t1.type in (TT_STRING, TT_IDENTIFIER):
+            j = i + 1
+            while j < len(self.tokens) and self.tokens[j].type in (TT_NEWLINE, TT_SEMI):
+                j += 1
+            if j < len(self.tokens) and self.tokens[j].type == TT_COLON:
+                return True
+        return False
+
+    def parse_brace_dict(self) -> DictNode:
+        # current token is '{'
+        self.advance()
+        key_nodes: List[Any] = []
+        value_nodes: List[Any] = []
+        # allow newlines/semicolons
+        while self.current_tok.type in (TT_NEWLINE, TT_SEMI):
+            self.advance()
+        if self.current_tok.type != TT_RBRACE:
+            key_nodes.append(self.dict_key())
+            if self.current_tok.type != TT_COLON:
+                raise ParseError(self.current_tok, "Expected ':' in dict literal")
+            self.advance()
+            value_nodes.append(self.expr())
+            while self.current_tok.type == TT_COMMA:
+                self.advance()
+                # allow trailing comma before '}'
+                while self.current_tok.type in (TT_NEWLINE, TT_SEMI):
+                    self.advance()
+                if self.current_tok.type == TT_RBRACE:
+                    break
+                key_nodes.append(self.dict_key())
+                if self.current_tok.type != TT_COLON:
+                    raise ParseError(self.current_tok, "Expected ':' in dict literal")
+                self.advance()
+                value_nodes.append(self.expr())
+        if self.current_tok.type != TT_RBRACE:
+            raise ParseError(self.current_tok, "Expected '}' to close dict")
+        self.advance()
+        return DictNode(key_nodes, value_nodes)
+
+    def parse_dict_constructor(self) -> DictNode:
+        # current token is '('
+        self.advance()
+        key_nodes: List[Any] = []
+        value_nodes: List[Any] = []
+        # allow empty constructor: dict()
+        while self.current_tok.type in (TT_NEWLINE, TT_SEMI):
+            self.advance()
+        if self.current_tok.type != TT_RPAREN:
+            # Expect one or more keyword-style args: name '=' expr
+            if not (self.current_tok.type == TT_IDENTIFIER and self.peek_type() == TT_EQ):
+                raise ParseError(self.current_tok, "Expected keyword argument like name=value in dict(...)")
+            # Parse first pair
+            name_tok = self.current_tok
+            self.advance()  # name
+            self.advance()  # '='
+            key_nodes.append(StringNode(Token(TT_STRING, name_tok.value, name_tok.pos_start, name_tok.pos_end)))
+            value_nodes.append(self.expr())
+            while self.current_tok.type == TT_COMMA:
+                self.advance()
+                while self.current_tok.type in (TT_NEWLINE, TT_SEMI):
+                    self.advance()
+                if self.current_tok.type == TT_RPAREN:
+                    break
+                if not (self.current_tok.type == TT_IDENTIFIER and self.peek_type() == TT_EQ):
+                    raise ParseError(self.current_tok, "Expected keyword argument like name=value in dict(...)")
+                name_tok = self.current_tok
+                self.advance()  # name
+                self.advance()  # '='
+                key_nodes.append(StringNode(Token(TT_STRING, name_tok.value, name_tok.pos_start, name_tok.pos_end)))
+                value_nodes.append(self.expr())
+        if self.current_tok.type != TT_RPAREN:
+            raise ParseError(self.current_tok, "Expected ')' to close dict(...)")
+        self.advance()
+        return DictNode(key_nodes, value_nodes)
 
     def bin_op(self, func, ops, right_assoc: bool=False):
         left = func()
@@ -787,7 +922,10 @@ class Function:
         symbols = SymbolTable(self.parent)
         for n, v in zip(self.arg_names, args):
             symbols.set(n, v)
-        return interpreter.exec_block(self.body, symbols)
+        try:
+            return interpreter.exec_block(self.body, symbols)
+        except ReturnSignal as rs:
+            return rs.value
 
     def __repr__(self):
         return f"<fun {self.name or '<anon>'}({', '.join(self.arg_names)})>"
@@ -808,9 +946,10 @@ class SymbolTable:
         self.symbols[name] = value
 
 class Interpreter:
-    def __init__(self):
+    def __init__(self, base_dir: Optional[str]=None):
         self.globals = SymbolTable()
         self.inject_builtins(self.globals)
+        self.base_dir = base_dir
 
     def inject_builtins(self, syms: SymbolTable):
         # Python functions wrapped directly
@@ -838,6 +977,38 @@ class Interpreter:
         syms.set('true', True)
         syms.set('false', False)
         syms.set('null', None)
+        # --- Stdlib Extensions ---
+        import json, time, os
+        def read_file(path):
+            with open(path, 'r', encoding='utf-8') as f:
+                return f.read()
+        def write_file(path, text):
+            with open(path, 'w', encoding='utf-8') as f:
+                f.write(str(text))
+                return True
+        def append_file(path, text):
+            with open(path, 'a', encoding='utf-8') as f:
+                f.write(str(text))
+                return True
+        def json_parse(s):
+            return json.loads(s)
+        def json_stringify(v):
+            return json.dumps(v)
+        def now():
+            return time.strftime('%Y-%m-%dT%H:%M:%S', time.localtime())
+        def timestamp():
+            return int(time.time())
+        def sleep(sec):
+            time.sleep(sec)
+            return None
+        syms.set('read_file', read_file)
+        syms.set('write_file', write_file)
+        syms.set('append_file', append_file)
+        syms.set('json_parse', json_parse)
+        syms.set('json_stringify', json_stringify)
+        syms.set('now', now)
+        syms.set('timestamp', timestamp)
+        syms.set('sleep', sleep)
 
     def run(self, node: BlockNode, symbols: Optional[SymbolTable]=None) -> Any:
         if symbols is None:
@@ -846,12 +1017,9 @@ class Interpreter:
 
     def exec_block(self, block: BlockNode, symbols: SymbolTable) -> Any:
         last = None
-        try:
-            for stmt in block.statements:
-                last = self.visit(stmt, symbols)
-            return last
-        except ReturnSignal as rs:
-            return rs.value
+        for stmt in block.statements:
+            last = self.visit(stmt, symbols)
+        return last
 
     def visit(self, node: Any, symbols: SymbolTable) -> Any:
         t = type(node)
@@ -859,6 +1027,13 @@ class Interpreter:
             return node.tok.value
         if t is StringNode:
             return node.tok.value
+        if t is DictNode:
+            d = {}
+            for k_node, v_node in zip(node.key_nodes, node.value_nodes):
+                k = self.visit(k_node, symbols)
+                v = self.visit(v_node, symbols)
+                d[k] = v
+            return d
         if t is ListNode:
             return [self.visit(el, symbols) for el in node.element_nodes]
         if t is VarAccessNode:
@@ -928,6 +1103,20 @@ class Interpreter:
                     return lambda x: obj.index(x)
                 elif attr_name == 'join':
                     return lambda sep: sep.join(str(x) for x in obj)
+            # Dict methods
+            elif isinstance(obj, dict):
+                if attr_name == 'keys':
+                    return lambda: list(obj.keys())
+                elif attr_name == 'values':
+                    return lambda: list(obj.values())
+                elif attr_name == 'items':
+                    return lambda: list(obj.items())
+                elif attr_name == 'get':
+                    return lambda key, default=None: obj.get(key, default)
+                elif attr_name == 'set':
+                    return lambda key, value: obj.__setitem__(key, value)
+                elif attr_name == 'has':
+                    return lambda key: key in obj
             raise RTError(f"Object has no attribute '{attr_name}'")
         if t is BinOpNode:
             left = self.visit(node.left, symbols)
@@ -1026,6 +1215,37 @@ class Interpreter:
         if t is ReturnNode:
             val = self.visit(node.node_to_return, symbols) if node.node_to_return is not None else None
             raise ReturnSignal(val)
+        if t is ImportNode:
+            path = self.visit(node.path_node, symbols)
+            if not isinstance(path, str):
+                raise RTError('import expects a string path')
+            # Resolve base directory if available
+            base_dir = getattr(self, 'base_dir', None)
+            import os
+            full_path = path
+            if base_dir is not None and not os.path.isabs(full_path):
+                full_path = os.path.join(base_dir, path)
+            if not os.path.exists(full_path):
+                # try adding .mc
+                if os.path.exists(full_path + '.mc'):
+                    full_path = full_path + '.mc'
+                else:
+                    raise RTError(f"Module not found: {path}")
+            with open(full_path, 'r', encoding='utf-8') as f:
+                src = f.read()
+            # Parse and execute module in its own symbol table
+            lexer = Lexer(full_path, src)
+            tokens = lexer.make_tokens()
+            parser = Parser(tokens)
+            tree = parser.parse()
+            module_symbols = SymbolTable(self.globals)
+            # Create a child interpreter with updated base_dir
+            child = Interpreter()
+            child.base_dir = os.path.dirname(full_path)
+            # Share globals (builtins) but use module_symbols for locals
+            result = child.run(tree, module_symbols)
+            # Return module as dict of its symbols
+            return dict(module_symbols.symbols)
         if t is BlockNode:
             return self.exec_block(node, SymbolTable(symbols))
         if t is NoOpNode:
@@ -1098,7 +1318,9 @@ def run(code: str, fn: str = '<stdin>') -> Tuple[Any, Optional[str]]:
         return None, str(pe)
     # Interpret
     try:
-        result = Interpreter().run(tree)
+        import os
+        base_dir = os.path.dirname(fn) if fn and fn not in ('<stdin>', '<web>') else None
+        result = Interpreter(base_dir=base_dir).run(tree)
         return result, None
     except RTError as rte:
         return None, f"Runtime Error: {rte}"
