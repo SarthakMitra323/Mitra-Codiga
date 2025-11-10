@@ -636,6 +636,7 @@
                         <div class="editor-dot dot-minimize"></div>
                         <div class="editor-dot dot-maximize"></div>
                     </div>
+                    <div id="error-pane" style="display:none;padding:10px 15px;background:#2b1d1d;color:#f48771;border-bottom:1px solid #3c3c3c;font-family:'Fira Code','Courier New',monospace;white-space:pre-wrap"></div>
                     <textarea id="code-editor" spellcheck="false" placeholder="# Welcome to Mitra Codiga!
 # Try typing some code here:
 
@@ -926,6 +927,7 @@ Type your code in the editor and click "Run Code" or press Ctrl+Enter!
         async function executeCode() {
             const output = document.getElementById('output');
             const inputSection = document.getElementById('input-section');
+            const errorPane = document.getElementById('error-pane');
             
             if (!currentCode.trim()) {
                 output.textContent = 'Error: No code to execute';
@@ -933,6 +935,8 @@ Type your code in the editor and click "Run Code" or press Ctrl+Enter!
                 return;
             }
             
+            errorPane.style.display = 'none';
+            errorPane.textContent = '';
             output.textContent = 'Running...';
             output.className = 'loading';
             inputSection.classList.remove('show');
@@ -954,6 +958,29 @@ Type your code in the editor and click "Run Code" or press Ctrl+Enter!
                 if (result.error) {
                     output.textContent = result.error;
                     output.className = 'error';
+                    if (result.error_detail && result.error_detail.line) {
+                        // Show a friendly error pane and move cursor to error location
+                        const line = result.error_detail.line;
+                        const col = result.error_detail.col || 0;
+                        const snippet = result.error_detail.snippet || '';
+                        errorPane.style.display = 'block';
+                        errorPane.textContent = `Error (line ${line}, col ${col}):\n${snippet}`;
+                        // Move caret to the error line and scroll into view
+                        const editor = document.getElementById('code-editor');
+                        const text = editor.value;
+                        let pos = 0; let currentLine = 1;
+                        while (currentLine < line && pos < text.length) {
+                            const nl = text.indexOf('\n', pos);
+                            if (nl === -1) { pos = text.length; break; }
+                            pos = nl + 1; currentLine++;
+                        }
+                        const caret = pos + (col || 0);
+                        editor.focus();
+                        editor.setSelectionRange(caret, caret);
+                        // Scroll so the error line is centered
+                        const lineHeight = 24;
+                        editor.scrollTop = Math.max(0, (line - 3) * lineHeight);
+                    }
                 } else if (result.input_needed) {
                     // Show input prompt
                     output.textContent = result.output || '';
