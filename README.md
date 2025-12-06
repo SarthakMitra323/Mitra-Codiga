@@ -4,7 +4,7 @@ An advanced, educational programming language interpreter built in Python. Featu
 
 ## 🚀 Try it Online
 
-(Mitra Codiga)[mitra-codiga.vercel.app]
+[Mitra Codiga](https://mitra-codiga.vercel.app)
 
 ## ✨ Features
 
@@ -160,6 +160,7 @@ Built as an educational project to demonstrate:
 ---
 
 **Made with ❤️**
+
 
 
 
