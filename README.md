@@ -105,24 +105,6 @@ git push heroku main
 - Drag & drop the folder to Netlify
 - Or connect via GitHub for auto-deployment
 
-## 📂 Project Structure
-
-```
-mitra-codiga/
-├── mc_lang.py          # Core interpreter implementation
-├── run_mc.py           # CLI runner for .mc files  
-├── web_app.py          # Flask web interface
-├── demo.mc             # Example program
-├── templates/
-│   └── index.html      # Web interface
-├── requirements.txt    # Python dependencies
-├── Procfile           # Heroku deployment
-├── runtime.txt        # Python version spec
-├── vercel.json        # Vercel config
-├── netlify.toml       # Netlify config
-└── README.md          # This file
-```
-
 ## 🔧 Development
 
 ### Architecture
@@ -160,6 +142,7 @@ Built as an educational project to demonstrate:
 ---
 
 **Made with ❤️**
+
 
 
 
