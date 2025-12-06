@@ -761,7 +761,8 @@ Type your code in the editor and click "Run Code" or press Ctrl+Enter!
       <button onclick="saveFile()" style="background:#667eea;color:#fff;">💾 Save</button>
       <button onclick="loadFileList()" style="background:#4285F4;color:#fff;">📂 Load</button>
       <select id="file-list" style="display:none;"></select>
-      <button onclick="logout()" style="float:right;margin-left:30px;background:#f48771;color:#fff;">Sign Out</button>
+      <a href="/docs" style="color:white;text-decoration:none;padding:8px 16px;background:#667eea;border-radius:8px;margin-left:auto;margin-right:15px;font-weight:600;transition:all 0.3s;cursor:pointer;" onmouseover="this.style.background='#5568d3'" onmouseout="this.style.background='#667eea'">📚 Docs</a>
+      <button onclick="logout()" style="background:#f48771;color:#fff;">Sign Out</button>
     </div>
 
     <!-- FIREBASE SDK -->
@@ -837,14 +838,22 @@ Type your code in the editor and click "Run Code" or press Ctrl+Enter!
             window.currentUser = null;
           });
         }
+        
+        // Auto-login: check for existing session and hide landing modal if logged in
         auth.onAuthStateChanged(user => {
+          const landingModal = document.getElementById('landing-modal');
           if (user) {
+            // User is signed in; hide landing modal and show file bar
+            landingModal.style.display = 'none';
             hideAuthModal();
             showFileBar(user);
             window.currentUser = user;
           } else {
+            // User is not signed in; show landing modal after a brief delay to avoid flicker
+            setTimeout(() => {
+              landingModal.style.display = 'flex';
+            }, 100);
             hideFileBar();
-            document.getElementById('landing-modal').style.display = 'flex';
             window.currentUser = null;
           }
         });
