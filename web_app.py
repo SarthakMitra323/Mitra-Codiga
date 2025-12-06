@@ -1,13 +1,15 @@
 from flask import Flask, render_template, request, jsonify
 from mc_lang import run, LexerError, ParseError, RTError
 import traceback
+import os
 
 class InputNeeded(Exception):
     def __init__(self, message):
         self.message = message
         super().__init__(message)
 
-app = Flask(__name__)
+# Initialize Flask app with static folder
+app = Flask(__name__, static_folder='static', static_url_path='/static')
 
 @app.route('/')
 def index():
