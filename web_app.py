@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, send_file, send_from_directory
 from mc_lang import run, LexerError, ParseError, RTError
 import traceback
 import os
@@ -210,6 +210,34 @@ def get_examples():
         }
     ]
     return jsonify(examples)
+
+@app.route('/api/download-installer')
+def download_installer():
+    """Serve the Windows installer for download."""
+    installer_path = 'dist/MitraCodigaIDE-installer.exe'
+    exe_path = 'dist/MitraCodigaIDE.exe'
+    
+    # Check if installer exists, otherwise try standalone executable
+    if os.path.exists(installer_path):
+        return send_file(installer_path, as_attachment=True, download_name='MitraCodigaIDE-installer.exe')
+    elif os.path.exists(exe_path):
+        return send_file(exe_path, as_attachment=True, download_name='MitraCodigaIDE.exe')
+    else:
+        return jsonify({'error': 'Installer not found. Please build the executable first using: python build_exe.py'}), 404
+
+@app.route('/api/download-interpreter')
+def download_interpreter():
+    """Serve the interpreter executable only."""
+    exe_path = 'dist/MitraCodigaIDE.exe'
+    installer_path = 'dist/MitraCodigaIDE-installer.exe'
+
+    if os.path.exists(exe_path):
+        return send_file(exe_path, as_attachment=True, download_name='MitraCodigaIDE.exe')
+    elif os.path.exists(installer_path):
+        # Fallback to installer if only that exists
+        return send_file(installer_path, as_attachment=True, download_name='MitraCodigaIDE-installer.exe')
+    else:
+        return jsonify({'error': 'Interpreter executable not found. Please build it first using: python build_exe.py'}), 404
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
