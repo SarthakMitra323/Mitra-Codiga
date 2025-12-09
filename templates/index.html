@@ -6,6 +6,10 @@
     <meta name="description" content="Mitra Codiga: Advanced programming language interpreter with variables, functions, control flow, interactive input/output. Features real-time web editor, REPL mode, educational examples. Perfect for learning language design, prototyping algorithms, and interactive programming. Built with Python.">
     <title>Mitra Codiga - Online Interpreter</title>
     <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+    <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+    <link rel="manifest" href="site.webmanifest">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
     <style>
         * {
@@ -565,48 +569,89 @@
             width: 100vw;
             background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
             color: #fff;
-            padding: 15px 30px;
+            padding: 14px 24px;
             z-index: 900;
             align-items: center;
-            gap: 15px;
+            gap: 16px;
             box-shadow: 0 4px 20px rgba(0,0,0,0.3);
             border-bottom: 2px solid #667eea;
+            flex-wrap: wrap;
         }
         
         #file-bar span {
-            margin-right: 20px;
-            font-weight: 500;
+            font-weight: 600;
+            font-size: 0.95rem;
+            margin-right: 4px;
         }
         
         #file-bar input,
         #file-bar select {
-            padding: 8px 14px;
-            border-radius: 8px;
-            border: 2px solid #3c3c3c;
-            background: #2d2d2d;
-            color: #d4d4d4;
+            padding: 9px 14px;
+            border-radius: 10px;
+            border: 2px solid #2d2f45;
+            background: #1f2238;
+            color: #e5e7f1;
             font-family: 'Inter', sans-serif;
-            transition: border-color 0.3s ease;
+            transition: border-color 0.25s ease, box-shadow 0.25s ease;
+            min-width: 220px;
         }
         
         #file-bar input:focus,
         #file-bar select:focus {
             outline: none;
-            border-color: #667eea;
+            border-color: #7b8bff;
+            box-shadow: 0 0 0 4px rgba(103,126,234,0.25);
+        }
+
+        .file-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
         }
         
-        #file-bar button {
-            padding: 8px 20px;
+        .file-btn {
+            padding: 9px 14px;
+            min-width: 140px;
             border: none;
-            border-radius: 8px;
+            border-radius: 10px;
             cursor: pointer;
-            font-weight: 600;
-            transition: all 0.3s ease;
+            font-weight: 700;
+            letter-spacing: 0.2px;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
             font-family: 'Inter', sans-serif;
+            color: #fff;
+            background: #4c5ccf;
+            box-shadow: 0 8px 20px rgba(76, 92, 207, 0.25);
         }
         
-        #file-bar button:hover {
-            transform: translateY(-2px);
+        .file-btn:hover {
+            transform: translateY(-2px) scale(1.01);
+            box-shadow: 0 12px 26px rgba(76, 92, 207, 0.35);
+            filter: brightness(1.05);
+        }
+        
+        .file-btn:active {
+            transform: translateY(0px) scale(0.99);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.25);
+        }
+        
+        .btn-purple { background: linear-gradient(135deg, #667eea, #6b8cff); box-shadow: 0 8px 20px rgba(102,126,234,0.35); }
+        .btn-blue   { background: linear-gradient(135deg, #3498db, #5dade2); box-shadow: 0 8px 20px rgba(52,152,219,0.35); }
+        .btn-red    { background: linear-gradient(135deg, #e74c3c, #ff6b5a); box-shadow: 0 8px 20px rgba(231,76,60,0.35); }
+        .btn-violet { background: linear-gradient(135deg, #9b59b6, #b37adf); box-shadow: 0 8px 20px rgba(155,89,182,0.35); }
+        .btn-orange { background: linear-gradient(135deg, #e67e22, #f39c12); box-shadow: 0 8px 20px rgba(230,126,34,0.35); }
+        .btn-green  { background: linear-gradient(135deg, #27ae60, #2ecc71); box-shadow: 0 8px 20px rgba(39,174,96,0.35); }
+        .btn-rose   { background: linear-gradient(135deg, #f48771, #f7a58e); box-shadow: 0 8px 20px rgba(244,135,113,0.35); }
+
+        @media (max-width: 960px) {
+            #file-bar {
+                padding: 12px 16px;
+                gap: 12px;
+            }
+            #file-bar input { min-width: 100%; }
+            .file-actions { width: 100%; }
+            .file-btn { flex: 1 1 45%; min-width: 140px; }
         }
         
         /* FIREBASE ERROR MESSAGE */
@@ -751,16 +796,23 @@ Type your code in the editor and click "Run Code" or press Ctrl+Enter!
       </div>
     </div>
 
-    <!-- FILE SAVE/LOAD UI -->
-    <div id="file-bar">
-      <span id="user-info"></span>
-      <input id="filename-input" type="text" placeholder="Filename...">
-      <button onclick="saveFile()" style="background:#667eea;color:#fff;">💾 Save</button>
-      <button onclick="loadFileList()" style="background:#4285F4;color:#fff;">📂 Load</button>
-      <select id="file-list" style="display:none;"></select>
-      <a href="/docs" style="color:white;text-decoration:none;padding:8px 16px;background:#667eea;border-radius:8px;margin-left:auto;margin-right:15px;font-weight:600;transition:all 0.3s;cursor:pointer;" onmouseover="this.style.background='#5568d3'" onmouseout="this.style.background='#667eea'">📚 Docs</a>
-      <button onclick="logout()" style="background:#f48771;color:#fff;">Sign Out</button>
-    </div>
+        <!-- FILE SAVE/LOAD UI -->
+        <div id="file-bar">
+            <span id="user-info"></span>
+            <input id="filename-input" type="text" placeholder="Filename...">
+            <select id="file-list" style="display:none;"></select>
+            <div class="file-actions">
+                <button class="file-btn btn-purple" onclick="saveFile()">💾 Save Cloud</button>
+                <button class="file-btn btn-blue" onclick="loadFileList()">📂 Load Cloud</button>
+                <button class="file-btn btn-red" onclick="downloadLocalFile()" title="Download .mc file to computer">⬇️ Save Local</button>
+                <button class="file-btn btn-violet" onclick="document.getElementById('file-import').click()" title="Import .mc file from computer">📁 Import File</button>
+                <input type="file" id="file-import" accept=".mc" style="display:none;" onchange="importLocalFile(event)">
+                <button class="file-btn btn-orange" onclick="document.getElementById('folder-import').click()" title="Import folder of .mc files">📂 Import Folder</button>
+                <input type="file" id="folder-import" webkitdirectory directory multiple style="display:none;" onchange="importFolder(event)">
+                <a class="file-btn btn-purple" href="/docs" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;">📚 Docs</a>
+                <button class="file-btn btn-rose" onclick="logout()">Sign Out</button>
+            </div>
+        </div>
 
     <!-- FIREBASE SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -888,8 +940,72 @@ Type your code in the editor and click "Run Code" or press Ctrl+Enter!
             .then(doc => {
               if (doc.exists) {
                 document.getElementById('code-editor').value = doc.data().code;
+                document.getElementById('filename-input').value = filename;
               }
             });
+        }
+        
+        // --- Local File Operations ---
+        function downloadLocalFile() {
+          const code = document.getElementById('code-editor').value;
+          let filename = document.getElementById('filename-input').value.trim();
+          if (!filename) filename = 'untitled';
+          if (!filename.endsWith('.mc')) filename += '.mc';
+          
+          const blob = new Blob([code], { type: 'text/plain' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }
+        
+        function importLocalFile(event) {
+          const file = event.target.files[0];
+          if (!file) return;
+          
+          const reader = new FileReader();
+          reader.onload = function(e) {
+            document.getElementById('code-editor').value = e.target.result;
+            let filename = file.name;
+            if (filename.endsWith('.mc')) filename = filename.slice(0, -3);
+            document.getElementById('filename-input').value = filename;
+          };
+          reader.readAsText(file);
+        }
+        
+        function importFolder(event) {
+          const files = Array.from(event.target.files).filter(f => f.name.endsWith('.mc'));
+          if (files.length === 0) {
+            alert('No .mc files found in folder');
+            return;
+          }
+          
+          if (!window.currentUser) {
+            alert('Sign in to import folder to cloud storage');
+            return;
+          }
+          
+          let imported = 0;
+          files.forEach(file => {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+              let filename = file.name.slice(0, -3); // Remove .mc extension
+              db.collection('users').doc(window.currentUser.uid).collection('files').doc(filename).set({
+                code: e.target.result,
+                updated: new Date()
+              }).then(() => {
+                imported++;
+                if (imported === files.length) {
+                  alert(`Imported ${imported} files to cloud storage`);
+                }
+              });
+            };
+            reader.readAsText(file);
+          });
         }
     </script>
     <!-- END FIREBASE -->
@@ -1164,5 +1280,4 @@ Type your code in the editor and click "Run Code" or press Ctrl+Enter!
         loadExamples();
     </script>
 </body>
-
 </html>
